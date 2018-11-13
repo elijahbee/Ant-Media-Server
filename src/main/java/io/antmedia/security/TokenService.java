@@ -10,16 +10,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 import io.antmedia.AppSettings;
 import io.antmedia.datastore.db.DataStoreFactory;
 import io.antmedia.datastore.db.IDataStore;
 import io.antmedia.datastore.db.types.Token;
 
-
+@Configuration
 public class TokenService implements ApplicationContextAware, IStreamPublishSecurity{
+	
+	@Bean
+	public TokenService tokenService() {
+		
+		return new TokenService();
+	}
 
-	public static final String BEAN_NAME = "token.service";
+	public static final String BEAN_NAME = "tokenService";
 	protected static Logger logger = LoggerFactory.getLogger(TokenService.class);
 	private AppSettings settings;
 	private IDataStore dataStore;
