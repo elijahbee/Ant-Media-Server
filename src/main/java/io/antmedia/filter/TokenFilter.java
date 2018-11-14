@@ -1,6 +1,7 @@
 package io.antmedia.filter;
 
 import java.io.IOException;
+
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
@@ -8,11 +9,17 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.web.context.WebApplicationContext;
+
 import io.antmedia.AppSettings;
+import io.antmedia.datastore.db.DataStoreFactory;
+import io.antmedia.datastore.db.IDataStore;
+import io.antmedia.datastore.db.IDataStoreFactory;
 import io.antmedia.datastore.db.types.Token;
 import io.antmedia.muxer.MuxAdaptor;
 import io.antmedia.security.TokenService;
@@ -24,6 +31,8 @@ public class TokenFilter implements javax.servlet.Filter   {
 	private AppSettings settings;
 	private TokenService tokenService;
 
+
+
 	@Override
 	public void init(FilterConfig filterConfig) throws ServletException {
 		this.filterConfig = filterConfig;
@@ -34,7 +43,7 @@ public class TokenFilter implements javax.servlet.Filter   {
 	@Override
 	public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
 			throws IOException, ServletException {
-		
+
 		HttpServletRequest httpRequest =(HttpServletRequest)request;
 		HttpServletResponse httpResponse = (HttpServletResponse)response;
 
@@ -43,8 +52,8 @@ public class TokenFilter implements javax.servlet.Filter   {
 		String sessionId = httpRequest.getSession().getId();
 		String streamId = getStreamId(httpRequest.getRequestURI());
 		String clientIP = httpRequest.getRemoteAddr();
-		
-		
+
+
 		logger.info("Client IP: {}, request url:  {}, token:  {}, sessionId: {},streamId:  {} ",clientIP 
 				,httpRequest.getRequestURI(), tokenId, sessionId, streamId);
 
@@ -58,7 +67,7 @@ public class TokenFilter implements javax.servlet.Filter   {
 				return; 
 			}
 			chain.doFilter(request, response);
-		
+
 		}
 		else {
 			chain.doFilter(httpRequest, response);
@@ -69,8 +78,16 @@ public class TokenFilter implements javax.servlet.Filter   {
 
 	public TokenService getTokenService() {
 		if (tokenService == null) {
+			AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext(TokenService.class);
+
 			ApplicationContext context = (ApplicationContext) filterConfig.getServletContext().getAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE);
-			tokenService = (TokenService)context.getBean(TokenService.BEAN_NAME);
+			
+			IDataStore dataStore = ((DataStoreFactory) context.getBean(IDataStoreFactory.BEAN_NAME)).getDataStore();
+
+			
+			tokenService = (TokenService) ctx.getBean(TokenService.BEAN_NAME);
+			
+			tokenService.setDataStore(dataStore);
 
 		}
 		return tokenService;
@@ -126,6 +143,16 @@ public class TokenFilter implements javax.servlet.Filter   {
 	public void destroy() {
 		//no need
 	}
+
+
+
+
+
+
+
+
+
+
 
 
 

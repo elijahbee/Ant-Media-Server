@@ -3,6 +3,10 @@ package io.antmedia.security;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.servlet.annotation.WebListener;
+import javax.servlet.http.HttpSessionEvent;
+import javax.servlet.http.HttpSessionListener;
+
 import org.red5.server.api.Red5;
 import org.red5.server.api.scope.IScope;
 import org.red5.server.api.stream.IStreamPublishSecurity;
@@ -10,22 +14,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Component;
 
 import io.antmedia.AppSettings;
 import io.antmedia.datastore.db.DataStoreFactory;
 import io.antmedia.datastore.db.IDataStore;
+import io.antmedia.datastore.db.IDataStoreFactory;
 import io.antmedia.datastore.db.types.Token;
 
-@Configuration
-public class TokenService implements ApplicationContextAware, IStreamPublishSecurity{
-	
-	@Bean
-	public TokenService tokenService() {
-		
-		return new TokenService();
-	}
+
+@WebListener
+@Component("tokenService")
+public class TokenService implements ApplicationContextAware, IStreamPublishSecurity, HttpSessionListener{
+
+
 
 	public static final String BEAN_NAME = "tokenService";
 	protected static Logger logger = LoggerFactory.getLogger(TokenService.class);
@@ -37,6 +39,9 @@ public class TokenService implements ApplicationContextAware, IStreamPublishSecu
 	private ApplicationContext applicationContext;
 
 
+	
+	
+	
 	@Override
 	public void setApplicationContext(ApplicationContext applicationContext) {
 
@@ -45,8 +50,10 @@ public class TokenService implements ApplicationContextAware, IStreamPublishSecu
 			settings = (AppSettings)applicationContext.getBean(AppSettings.BEAN_NAME);
 
 		}
-
 	}
+
+	
+	
 
 	public boolean checkToken(String tokenId, String streamId, String sessionId, String type) {
 		boolean result = false;
@@ -68,9 +75,7 @@ public class TokenService implements ApplicationContextAware, IStreamPublishSecu
 				if (authenticatedMap.containsKey(sessionId) && authenticatedMap.get(sessionId).equals(streamId) ) {
 					result = true;
 				}
-
 			}
-
 		}
 		return result;
 	}
@@ -110,7 +115,7 @@ public class TokenService implements ApplicationContextAware, IStreamPublishSecu
 
 	public IDataStore getDataStore() {
 		if(dataStore == null) {
-			dataStore = ((DataStoreFactory) applicationContext.getBean("dataStoreFactory")).getDataStore();
+			dataStore = ((DataStoreFactory) applicationContext.getBean(IDataStoreFactory.BEAN_NAME)).getDataStore();
 		}
 		return dataStore;
 	}
@@ -119,5 +124,26 @@ public class TokenService implements ApplicationContextAware, IStreamPublishSecu
 		this.dataStore = dataStore;
 	}
 
+
+	public Map<String, String> getAuthenticatedMap() {
+		return authenticatedMap;
+	}
+
+	public void setAuthenticatedMap(Map<String, String> authenticatedMap) {
+		this.authenticatedMap = authenticatedMap;
+	}
+
+	@Override
+	public void sessionCreated(HttpSessionEvent se) {
+		logger.info("session created {}", se.getSession().getId());
+
+	}
+
+	@Override
+	public void sessionDestroyed(HttpSessionEvent se) {
+		logger.info("session closed {}", se.getSession().getId());
+		
+			authenticatedMap.remove(se.getSession().getId());
+	}
 
 }
